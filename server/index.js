@@ -5,9 +5,11 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+import catalyst from 'zcatalyst-sdk-node';
 import authRoutes from './routes/auth.js';
 import todoRoutes from './routes/todos.js';
 import expenseRoutes from './routes/expenses.js';
+import authMiddleware from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,10 +28,17 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Catalyst middleware
+app.use((req, res, next) => {
+  const catalystApp = catalyst.initialize(req);
+  req.catalyst = catalystApp;
+  next();
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/todos', todoRoutes);
-app.use('/api/expenses', expenseRoutes);
+app.use('/api/todos', authMiddleware, todoRoutes);
+app.use('/api/expenses', authMiddleware, expenseRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
