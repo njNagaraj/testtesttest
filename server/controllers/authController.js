@@ -1,115 +1,109 @@
-import CatalystService from '../services/catalyst.js';
-
 const authController = {
   async register(req, res) {
     try {
-      const { firstName, lastName, email, password } = req.body;
+      const { firstName, lastName, email } = req.body;
+      const catalyst = req.catalyst;
 
       if (!firstName || !lastName || !email) {
-        return res.status(400).json({ 
-          error: 'First name, last name, and email are required' 
+        return res.status(400).json({
+          error: 'First name, last name, and email are required',
         });
       }
 
-      // In a real Catalyst environment, you would use the actual Catalyst service
-      // For demo purposes, we'll simulate user registration
-      const mockUser = {
-        id: `user_${Date.now()}`,
+      const userManagement = catalyst.userManagement();
+      const userConfig = {
         first_name: firstName,
         last_name: lastName,
         email_id: email,
-        created_time: new Date().toISOString(),
-        status: 'CONFIRMED'
       };
 
-      // Simulate token generation
-      const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+      const signupConfig = {
+        platform_type: 'web',
+        redirect_url: 'http://localhost:5173/dashboard',
+      };
+
+      const userDetails = await userManagement.registerUser(signupConfig, userConfig);
 
       res.status(201).json({
         success: true,
-        user: mockUser,
-        token,
-        message: 'User registered successfully'
+        user: userDetails,
+        message: 'Registration initiated. Please check your email to confirm.',
       });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ 
-        error: 'Registration failed', 
-        details: error.message 
+      res.status(500).json({
+        error: 'Registration failed',
+        details: error.message,
       });
     }
   },
 
   async login(req, res) {
+    // Catalyst handles login via its own mechanisms (hosted components or client SDK)
+    // This endpoint is to fetch user details after they have logged in on the client
+    // and the client has a valid Catalyst token.
     try {
-      const { email, password } = req.body;
+      const catalyst = req.catalyst;
+      const userManagement = catalyst.userManagement();
+      const currentUser = await userManagement.getCurrentUser();
 
-      if (!email || !password) {
-        return res.status(400).json({ 
-          error: 'Email and password are required' 
-        });
+      if (!currentUser) {
+        return res.status(401).json({ error: 'Not authenticated' });
       }
-
-      // In a real implementation, you would validate credentials with Catalyst
-      // For demo purposes, we'll simulate successful login
-      const mockUser = {
-        id: 'user_123',
-        first_name: 'Demo',
-        last_name: 'User',
-        email_id: email,
-        org_id: 'org_456',
-        created_time: new Date().toISOString(),
-        status: 'CONFIRMED'
-      };
-
-      const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
 
       res.json({
         success: true,
-        user: mockUser,
-        token,
-        message: 'Login successful'
+        user: currentUser,
+        message: 'Login successful',
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({ 
-        error: 'Login failed', 
-        details: error.message 
+      res.status(500).json({
+        error: 'Login failed',
+        details: error.message,
       });
     }
   },
 
   async logout(req, res) {
     try {
-      // In a real implementation, you might invalidate the token in Catalyst
+      // In a real implementation, you might need to sign out from the client-side
+      // The server-side token becomes invalid automatically after expiry
       res.json({
         success: true,
-        message: 'Logout successful'
+        message: 'Logout successful',
       });
     } catch (error) {
       console.error('Logout error:', error);
-      res.status(500).json({ 
-        error: 'Logout failed', 
-        details: error.message 
+      res.status(500).json({
+        error: 'Logout failed',
+        details: error.message,
       });
     }
   },
 
   async getCurrentUser(req, res) {
     try {
-      // Return the user from auth middleware
+      const catalyst = req.catalyst;
+      const userManagement = catalyst.userManagement();
+      const user = await userManagement.getCurrentUser();
+
+      if (!user) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
       res.json({
         success: true,
-        user: req.user
+        user: user,
       });
     } catch (error) {
       console.error('Get current user error:', error);
-      res.status(500).json({ 
-        error: 'Failed to get user details', 
-        details: error.message 
+      res.status(500).json({
+        error: 'Failed to get user details',
+        details: error.message,
       });
     }
-  }
+  },
 };
 
 export default authController;

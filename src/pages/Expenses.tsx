@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Calendar, DollarSign, TrendingUp, Filter, PieChart } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import api from '../api';
 
 interface Expense {
   id: string;
@@ -32,7 +33,7 @@ interface ExpenseSummary {
 }
 
 const CATEGORIES = [
-  'Food', 'Transportation', 'Entertainment', 'Shopping', 
+  'Food', 'Transportation', 'Entertainment', 'Shopping',
   'Bills', 'Healthcare', 'Office', 'Travel', 'Other'
 ];
 
@@ -54,24 +55,16 @@ const Expenses: React.FC = () => {
 
   const fetchExpenses = async () => {
     try {
-      const token = localStorage.getItem('token');
       const [expensesResponse, summaryResponse] = await Promise.all([
-        fetch('/api/expenses', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('/api/expenses/summary', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+        api.get('/expenses'),
+        api.get('/expenses/summary'),
       ]);
 
-      const expensesData = await expensesResponse.json();
-      const summaryData = await summaryResponse.json();
-
-      if (expensesData.success) {
-        setExpenses(expensesData.expenses);
+      if (expensesResponse.data.success) {
+        setExpenses(expensesResponse.data.expenses);
       }
-      if (summaryData.success) {
-        setSummary(summaryData.summary);
+      if (summaryResponse.data.success) {
+        setSummary(summaryResponse.data.summary);
       }
     } catch (error) {
       console.error('Error fetching expenses:', error);
@@ -87,23 +80,13 @@ const Expenses: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const url = editingExpense ? `/api/expenses/${editingExpense.id}` : '/api/expenses';
-      const method = editingExpense ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-        })
+      const url = editingExpense ? `/expenses/${editingExpense.id}` : '/expenses';
+      const method = editingExpense ? 'put' : 'post';
+      const { data } = await api[method](url, {
+        ...formData,
+        amount: parseFloat(formData.amount),
       });
 
-      const data = await response.json();
       if (data.success) {
         await fetchExpenses();
         resetForm();
@@ -115,15 +98,9 @@ const Expenses: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/expenses/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
 
-      const data = await response.json();
+    try {
+      const { data } = await api.delete(`/expenses/${id}`);
       if (data.success) {
         await fetchExpenses();
       }

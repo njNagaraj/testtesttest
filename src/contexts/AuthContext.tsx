@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import api from '../api';
 
 interface User {
   id: string;
@@ -66,7 +67,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
+  register: (firstName: string, lastName: string, email: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -95,14 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchCurrentUser = async (token: string) => {
     try {
       dispatch({ type: 'AUTH_START' });
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const { data } = await api.get('/auth/me');
+      if (data.success) {
         dispatch({
           type: 'AUTH_SUCCESS',
           payload: { user: data.user, token },
@@ -120,17 +115,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       dispatch({ type: 'AUTH_START' });
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      const { data } = await api.post('/auth/login', { email, password });
+      if (data.success) {
         localStorage.setItem('token', data.token);
         dispatch({
           type: 'AUTH_SUCCESS',
@@ -148,25 +134,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (firstName: string, lastName: string, email: string, password: string) => {
+  const register = async (firstName: string, lastName: string, email: string) => {
     try {
       dispatch({ type: 'AUTH_START' });
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ firstName, lastName, email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: { user: data.user, token: data.token },
-        });
+      const { data } = await api.post('/auth/register', { firstName, lastName, email });
+      if (data.success) {
+        // On successful registration initiation, we don't log the user in.
+        // We can optionally show a message to the user.
+        // The user will receive an email to complete the registration.
       } else {
         throw new Error(data.error || 'Registration failed');
       }

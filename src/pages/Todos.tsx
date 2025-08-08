@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Check, X, Filter } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import api from '../api';
 
 interface Todo {
   id: string;
@@ -26,11 +27,7 @@ const Todos: React.FC = () => {
 
   const fetchTodos = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/todos', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const { data } = await api.get('/todos');
       if (data.success) {
         setTodos(data.todos);
       }
@@ -48,20 +45,10 @@ const Todos: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const url = editingTodo ? `/api/todos/${editingTodo.id}` : '/api/todos';
-      const method = editingTodo ? 'PUT' : 'POST';
+      const url = editingTodo ? `/todos/${editingTodo.id}` : '/todos';
+      const method = editingTodo ? 'put' : 'post';
+      const { data } = await api[method](url, formData);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
       if (data.success) {
         await fetchTodos();
         resetForm();
@@ -73,17 +60,10 @@ const Todos: React.FC = () => {
 
   const handleToggleComplete = async (todo: Todo) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/todos/${todo.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ completed: !todo.completed })
+      const { data } = await api.put(`/todos/${todo.id}`, {
+        completed: !todo.completed,
       });
 
-      const data = await response.json();
       if (data.success) {
         await fetchTodos();
       }
@@ -94,15 +74,9 @@ const Todos: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this todo?')) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/todos/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
 
-      const data = await response.json();
+    try {
+      const { data } = await api.delete(`/todos/${id}`);
       if (data.success) {
         await fetchTodos();
       }
